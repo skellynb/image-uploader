@@ -1,8 +1,15 @@
-*.env
+# Ignore node_modules
+node_modules/
 
+# Ignore environment files
+.env
+
+# Ignore system files
+.DS_Store
+
+# Ignore design files
 *.fig
 *.xd
 
-.DS_Store
+# Others (optional)
 .prettierignore
-
