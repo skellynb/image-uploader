@@ -1,8 +1,11 @@
 const express = require('express');
 const path = require('path');
 const uploadRoutes = require('./routes/upload');
+const cors = require('cors');
 
 const app = express();
+
+app.use(cors());
 
 // Middleware
 app.use(express.json());
