@@ -5,6 +5,17 @@ const app = require('../src/app'); // Adjust if needed
 
 describe('POST /api/upload', () => {
   const testImagePath = path.join(__dirname, 'test-image.jpg');
+  
+  // Clean up any test files after each test
+  afterEach(() => {
+    const testFiles = ['fake.txt', 'big.jpg'];
+    testFiles.forEach(file => {
+      const filePath = path.join(__dirname, file);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    });
+  });
 
   it('should upload a valid image file', async () => {
     const res = await request(app)
@@ -26,22 +37,28 @@ describe('POST /api/upload', () => {
     expect(res.text).toMatch(/No file uploaded|Unexpected field/);
   });
 
- it('should reject unsupported file types', async () => {
-  const fakeFile = path.join(__dirname, 'fake.txt');
-  fs.writeFileSync(fakeFile, 'This is not an image');
+  it('should reject unsupported file types', async () => {
+    const fakeFile = path.join(__dirname, 'fake.txt');
+    fs.writeFileSync(fakeFile, 'This is not an image');
 
-  const res = await request(app)
-    .post('/api/upload')
-    .attach('file', fakeFile);
+    try {
+      const res = await request(app)
+        .post('/api/upload')
+        .attach('file', fakeFile);
 
-  // Clean up the test file
-  fs.existsSync(fakeFile) && fs.unlinkSync(fakeFile);
-
-  // Check response
-  expect(res.statusCode).toBe(400);
-  expect(res.text).toMatch(/Only JPG, PNG, and GIF files are allowed/i);
-});
-
+      // Check response
+      expect(res.statusCode).toBe(400);
+      expect(res.text).toMatch(/Only JPG, PNG, and GIF files are allowed/i);
+    } catch (error) {
+      // If there's a connection error, check if it's due to server validation
+      if (error.code === 'ECONNRESET') {
+        // This might indicate the server is properly rejecting the file
+        // but not sending a proper HTTP response
+        console.warn('Connection reset - server may need better error handling');
+      }
+      throw error;
+    }
+  });
 
   it('should reject file over size limit', async () => {
     const bigFile = path.join(__dirname, 'big.jpg');
@@ -54,7 +71,5 @@ describe('POST /api/upload', () => {
 
     expect(res.statusCode).toBe(400);
     expect(res.text).toMatch(/File too large/i);
-
-    fs.existsSync(bigFile) && fs.unlinkSync(bigFile);
   });
 });

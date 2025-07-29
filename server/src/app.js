@@ -1,34 +1,42 @@
 const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
-const uploadRoute = require('./routes/upload')
-
-dotenv.config();
+const uploadRoutes = require('./routes/upload');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
 
-// Log all incoming requests
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.path} - ${new Date().toISOString()}`);
-  next();
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// Routes
+app.use('/api', uploadRoutes);
+
+// Global error handling middleware
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error);
+  
+  // Handle multer errors that might slip through
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).send('File too large');
+  }
+  if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).send('No file uploaded');
+  }
+
+  if (error.code === 'INVALID_FILE_TYPE') {
+    return res.status(400).send('Only JPG, PNG, and GIF files are allowed');
+  }
+  
+  // Generic error response
+  res.status(500).send('Something went wrong');
 });
 
-// Serve uploads folder
-app.use('/uploads', express.static(path.join(__dirname, process.env.UPLOAD_DIR || 'uploads')));
-
-// Enable CORS and JSON parsing
-app.use(cors());
-app.use(express.json());
-
-// ROUTES
-console.log('Mounting upload route at /api/upload');
-app.use('/api/upload', uploadRoute);
-
-// Test route
-app.get('/test', (req, res) => {
-  res.json({ message: 'Server is running' });
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route not found' });
 });
 
 module.exports = app;

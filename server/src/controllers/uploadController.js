@@ -1,29 +1,42 @@
-const multer = require('multer');
-const path = require('path');
-const dotenv = require('dotenv');
+const upload = require('../middleware/multerConfig');
 
-dotenv.config();
+const uploadFile = (req, res) => {
+  console.log('Upload request received');
 
-// Parse allowed types
-const allowedTypes = (process.env.ALLOWED_TYPES || '').split(',');
+  try {
+    upload.single('file')(req, res, (err) => {
+      console.log('Multer callback executed');
 
-// Set up storage
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, Date.now()+ ext);
+      if (err) {
+        console.log('Multer error:', err);
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).send('File too large');
+        }
+        if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+          return res.status(400).send('No file uploaded');
+        }
+        if (err.message?.includes('Only JPG, PNG, and GIF')) {
+          return res.status(400).send('Only JPG, PNG, and GIF files are allowed');
+        }
+        return res.status(400).send(`Upload error: ${err.message}`);
+      }
+
+      if (!req.file) {
+        return res.status(400).send('No file uploaded');
+      }
+
+      console.log('File uploaded:', req.file.filename);
+      res.status(200).json({
+        message: 'File uploaded successfully',
+        url: `/uploads/${req.file.filename}`,
+        filename: req.file.filename,
+        size: req.file.size
+      });
+    });
+  } catch (error) {
+    console.error('Unexpected error:', error);
+    res.status(500).send('Unexpected server error');
   }
-});
+};
 
-const upload = multer({
-  storage,
-  limits: {fileSize: 2 * 1024 * 1024},
-  fileFilter:(req, file, cb) => {
-    const types = ['image/jpeg', 'image/png', 'image/gif'];
-    if (types.includes(file.mimetype)) cb(null, true);
-    else cb(new Error('only JPG, PNG, and GIF allowed'));
-  }
-})
-
-module.exports = upload;
+module.exports = { uploadFile };
