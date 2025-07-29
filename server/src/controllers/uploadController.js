@@ -1,4 +1,7 @@
 const upload = require('../middleware/multerConfig');
+const path = require('path');
+const fs = require('fs');
+
 
 const uploadFile = (req, res) => {
   console.log('Upload request received');
@@ -38,5 +41,7 @@ const uploadFile = (req, res) => {
     res.status(500).send('Unexpected server error');
   }
 };
+
+
 
 module.exports = { uploadFile };
