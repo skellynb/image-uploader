@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+
+/* Enable dark mode with class strategy */
+@variant dark (&:is(.dark *));
+
+/* Optional: Set up color scheme for better browser integration */
+:root {
+  color-scheme: light dark;
+}
+
+.dark {
+  color-scheme: dark;
+}
